@@ -25,6 +25,9 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Class that loads the normal spring application context from the spring config file. Subclasses can use
  * Autowired to get dependencies from the application context.
@@ -36,6 +39,8 @@ import java.util.regex.Pattern;
         AbstractMapfishSpringTest.TEST_SPRING_FONT_XML
 })
 public abstract class AbstractMapfishSpringTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractMapfishSpringTest.class);
+
     public static final String DEFAULT_SPRING_XML = "classpath:mapfish-spring-application-context.xml";
     public static final String TEST_SPRING_XML =
             "classpath:test-http-request-factory-application-context.xml";
@@ -77,7 +82,7 @@ public abstract class AbstractMapfishSpringTest {
     public static PJsonObject parseJSONObjectFromFile(Class<?> testClass, String fileName)
             throws IOException {
         final File file = getFile(testClass, fileName);
-        System.out.println("File: " + fileName);
+        LOGGER.warn("File: {}", fileName);
         String jsonString = new String(Files.readAllBytes(file.toPath()), Constants.DEFAULT_CHARSET);
         Matcher matcher = IMPORT_PATTERN.matcher(jsonString);
         while (matcher.find()) {
@@ -89,7 +94,7 @@ public abstract class AbstractMapfishSpringTest {
             jsonString = jsonString.replace(tagToReplace, importJson);
             matcher = IMPORT_PATTERN.matcher(jsonString);
         }
-        System.out.println("Json: " + jsonString);
+        LOGGER.warn("Json: {}", jsonString);
         return parseJSONObjectFromString(jsonString);
     }
 
