@@ -77,6 +77,7 @@ public abstract class AbstractMapfishSpringTest {
     public static PJsonObject parseJSONObjectFromFile(Class<?> testClass, String fileName)
             throws IOException {
         final File file = getFile(testClass, fileName);
+        System.out.println("File: " + fileName);
         String jsonString = new String(Files.readAllBytes(file.toPath()), Constants.DEFAULT_CHARSET);
         Matcher matcher = IMPORT_PATTERN.matcher(jsonString);
         while (matcher.find()) {
@@ -88,6 +89,7 @@ public abstract class AbstractMapfishSpringTest {
             jsonString = jsonString.replace(tagToReplace, importJson);
             matcher = IMPORT_PATTERN.matcher(jsonString);
         }
+        System.out.println("Json: " + jsonString);
         return parseJSONObjectFromString(jsonString);
     }
 
