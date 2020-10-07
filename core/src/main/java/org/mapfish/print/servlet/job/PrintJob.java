@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.mapfish.print.servlet.job.impl.hibernate.PrintJobDao;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -53,7 +54,8 @@ import javax.mail.internet.MimeMultipart;
  */
 public abstract class PrintJob implements Callable<PrintJobResult> {
     private static final Logger LOGGER = LoggerFactory.getLogger(PrintJob.class);
-    private PrintJobEntry entry;
+    private String ref;
+    private PrintJobEntry test_entry;
 
     @Autowired
     private MapPrinterFactory mapPrinterFactory;
@@ -63,6 +65,8 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
     private Accounting accounting;
     @Autowired
     private WorkingDirectories workingDirectories;
+    @Autowired
+    private PrintJobDao dao;
 
     private SecurityContext securityContext;
 
@@ -93,15 +97,15 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
     }
 
     public final PrintJobEntry getEntry() {
-        return this.entry;
+        return test_entry != null ? test_entry : this.dao.get(this.ref).getEntry();
     }
 
-    public final void setEntry(final PrintJobEntry entry) {
-        this.entry = entry;
+    public final void setRef(final String ref) {
+        this.ref = ref;
     }
 
     protected File getReportFile() {
-        return new File(workingDirectories.getReports(), getEntry().getReferenceId());
+        return new File(workingDirectories.getReports(), ref);
     }
 
     /**
@@ -135,22 +139,23 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
 
     @Override
     public final PrintJobResult call() throws Exception {
+        PrintJobEntry entry = this.getEntry();
         SecurityContextHolder.setContext(this.securityContext);
         final Timer.Context timer = this.metricRegistry.timer(getClass().getName() + ".call").time();
-        MDC.put(Processor.MDC_JOB_ID_KEY, this.entry.getReferenceId());
-        LOGGER.info("Starting print job {}", this.entry.getReferenceId());
-        final MapPrinter mapPrinter = PrintJob.this.mapPrinterFactory.create(this.entry.getAppId());
+        MDC.put(Processor.MDC_JOB_ID_KEY, this.ref);
+        LOGGER.info("Starting print job {}", this.ref);
+        final MapPrinter mapPrinter = PrintJob.this.mapPrinterFactory.create(entry.getAppId());
         final Accounting.JobTracker jobTracker =
-                this.accounting.startJob(this.entry, mapPrinter.getConfiguration());
+                this.accounting.startJob(entry, mapPrinter.getConfiguration());
         try {
-            final PJsonObject spec = this.entry.getRequestData();
+            final PJsonObject spec = entry.getRequestData();
             final PrintResult report = withOpenOutputStream(
-                    outputStream -> mapPrinter.print(entry.getReferenceId(), entry.getRequestData(),
+                    outputStream -> mapPrinter.print(ref, entry.getRequestData(),
                                                      outputStream));
 
             this.metricRegistry.counter(getClass().getName() + ".success").inc();
-            LOGGER.info("Successfully completed print job {}", this.entry.getReferenceId());
-            LOGGER.debug("Job {}\n{}", this.entry.getReferenceId(), this.entry.getRequestData());
+            LOGGER.info("Successfully completed print job {}", this.ref);
+            LOGGER.debug("Job {}\n{}", this.ref, entry.getRequestData());
             final String fileName = getFileName(mapPrinter, spec);
 
             final OutputFormat outputFormat = mapPrinter.getOutputFormat(spec);
@@ -176,7 +181,7 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
             deleteReport();
             maybeSendError(mapPrinter.getConfiguration(), e);
             LOGGER.warn("Error executing print job {} {}\n{}",
-                        this.entry.getRequestData(), canceledText, this.entry.getReferenceId(), e);
+                        entry.getRequestData(), canceledText, this.ref, e);
             throw e;
         } finally {
             final long totalTimeMS = System.currentTimeMillis() - entry.getStartTime();
@@ -185,13 +190,13 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
                     .update(totalTimeMS, TimeUnit.MILLISECONDS);
             this.metricRegistry.timer(getClass().getName() + ".wait")
                     .update(totalTimeMS - computationTimeMs, TimeUnit.MILLISECONDS);
-            LOGGER.debug("Print Job {} completed in {}ms", this.entry.getReferenceId(), computationTimeMs);
+            LOGGER.debug("Print Job {} completed in {}ms", this.ref, computationTimeMs);
             MDC.remove(Processor.MDC_JOB_ID_KEY);
         }
     }
 
     private void maybeSendError(final Configuration configuration, final Exception e) {
-        final PJsonObject requestData = entry.getRequestData();
+        final PJsonObject requestData = getEntry().getRequestData();
         final SmtpConfig smtp = configuration.getSmtp();
         final PJsonObject requestSmtp = requestData.optJSONObject("smtp");
         if (smtp == null || requestSmtp == null) {
@@ -242,7 +247,7 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
             final Configuration configuration, final String fileName, final String fileExtension,
             final String mimeType, final ExecutionStats stats)
             throws IOException, MessagingException {
-        final PJsonObject requestData = entry.getRequestData();
+        final PJsonObject requestData = getEntry().getRequestData();
         final SmtpConfig smtp = configuration.getSmtp();
         final PJsonObject requestSmtp = requestData.optJSONObject("smtp");
         if (smtp == null || requestSmtp == null) {
@@ -267,7 +272,7 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
             final Timer.Context saveTimer =
                     this.metricRegistry.timer(config.getStorage().getClass().getName()).time();
             final URL url = config.getStorage().save(
-                    this.entry.getReferenceId(), fileName, fileExtension, mimeType, getReportFile());
+                    this.ref, fileName, fileExtension, mimeType, getReportFile());
             saveTimer.stop();
             msg = msg.replace("{url}", url.toString());
         }
@@ -353,7 +358,7 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
                 return null;
             }
         };
-        this.entry = new PrintJobEntryImpl();
+        this.test_entry = new PrintJobEntryImpl();
     }
 
     /**

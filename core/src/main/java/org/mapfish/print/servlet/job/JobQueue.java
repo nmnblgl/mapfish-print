@@ -82,8 +82,9 @@ public interface JobQueue {
      *
      * @param referenceId reference id to the job to start.
      * @throws NoSuchReferenceException
+     * @throws UnableGetJob
      */
-    void start(String referenceId) throws NoSuchReferenceException;
+    void start(String referenceId) throws NoSuchReferenceException, UnableGetJob;
 
     /**
      * Mark job as done.
@@ -109,7 +110,7 @@ public interface JobQueue {
      * @param number the number of jobs to start
      * @return the jobs that were just started
      */
-    List<? extends PrintJobStatus> start(int number);
+    List<String> start(int number);
 
     /**
      * Get the jobs that are marked as "CANCELING" and must be cancelled.
@@ -122,4 +123,19 @@ public interface JobQueue {
      * @param referenceId reference id to the job.
      */
     void delete(String referenceId);
+
+
+    /**
+     * Exception thrown for invalid job references.
+     */
+    public class UnableGetJob extends Exception {
+        /**
+         * Constructor.
+         *
+         * @param referenceId the reference id
+         */
+        public UnableGetJob() {
+            super("Unable to get the job.");
+        }
+    }
 }
