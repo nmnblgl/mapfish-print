@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -180,12 +181,14 @@ public class HibernateJobQueue implements JobQueue {
     @Override
     public final synchronized List<String> start(final int number) {
         List<PrintJobStatusExtImpl> list = this.dao.poll(number);
+        List<String> refs = new ArrayList<>();
         for (PrintJobStatusExtImpl record: list) {
             record.setStatus(PrintJobStatus.Status.RUNNING);
             record.setWaitingTime(0);
+            refs.add(record.getReferenceId());
             this.dao.save(record);
         }
-        return list;
+        return refs;
     }
 
     @Override

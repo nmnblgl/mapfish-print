@@ -54,7 +54,7 @@ import javax.mail.internet.MimeMultipart;
  */
 public abstract class PrintJob implements Callable<PrintJobResult> {
     private static final Logger LOGGER = LoggerFactory.getLogger(PrintJob.class);
-    private String ref;
+    private String referenceId;
     private PrintJobEntry test_entry;
 
     @Autowired
@@ -97,15 +97,15 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
     }
 
     public final PrintJobEntry getEntry() {
-        return test_entry != null ? test_entry : this.dao.get(this.ref).getEntry();
+        return test_entry != null ? test_entry : this.dao.get(this.referenceId).getEntry();
     }
 
-    public final void setRef(final String ref) {
-        this.ref = ref;
+    public final void setReferenceId(final String ref) {
+        this.referenceId = ref;
     }
 
     protected File getReportFile() {
-        return new File(workingDirectories.getReports(), ref);
+        return new File(workingDirectories.getReports(), referenceId);
     }
 
     /**
@@ -142,20 +142,20 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
         PrintJobEntry entry = this.getEntry();
         SecurityContextHolder.setContext(this.securityContext);
         final Timer.Context timer = this.metricRegistry.timer(getClass().getName() + ".call").time();
-        MDC.put(Processor.MDC_JOB_ID_KEY, this.ref);
-        LOGGER.info("Starting print job {}", this.ref);
+        MDC.put(Processor.MDC_JOB_ID_KEY, this.referenceId);
+        LOGGER.info("Starting print job {}", this.referenceId);
         final MapPrinter mapPrinter = PrintJob.this.mapPrinterFactory.create(entry.getAppId());
         final Accounting.JobTracker jobTracker =
                 this.accounting.startJob(entry, mapPrinter.getConfiguration());
         try {
             final PJsonObject spec = entry.getRequestData();
             final PrintResult report = withOpenOutputStream(
-                    outputStream -> mapPrinter.print(ref, entry.getRequestData(),
+                    outputStream -> mapPrinter.print(referenceId, entry.getRequestData(),
                                                      outputStream));
 
             this.metricRegistry.counter(getClass().getName() + ".success").inc();
-            LOGGER.info("Successfully completed print job {}", this.ref);
-            LOGGER.debug("Job {}\n{}", this.ref, entry.getRequestData());
+            LOGGER.info("Successfully completed print job {}", this.referenceId);
+            LOGGER.debug("Job {}\n{}", this.referenceId, entry.getRequestData());
             final String fileName = getFileName(mapPrinter, spec);
 
             final OutputFormat outputFormat = mapPrinter.getOutputFormat(spec);
@@ -181,7 +181,7 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
             deleteReport();
             maybeSendError(mapPrinter.getConfiguration(), e);
             LOGGER.warn("Error executing print job {} {}\n{}",
-                        entry.getRequestData(), canceledText, this.ref, e);
+                        entry.getRequestData(), canceledText, this.referenceId, e);
             throw e;
         } finally {
             final long totalTimeMS = System.currentTimeMillis() - entry.getStartTime();
@@ -190,7 +190,7 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
                     .update(totalTimeMS, TimeUnit.MILLISECONDS);
             this.metricRegistry.timer(getClass().getName() + ".wait")
                     .update(totalTimeMS - computationTimeMs, TimeUnit.MILLISECONDS);
-            LOGGER.debug("Print Job {} completed in {}ms", this.ref, computationTimeMs);
+            LOGGER.debug("Print Job {} completed in {}ms", this.referenceId, computationTimeMs);
             MDC.remove(Processor.MDC_JOB_ID_KEY);
         }
     }
@@ -272,7 +272,7 @@ public abstract class PrintJob implements Callable<PrintJobResult> {
             final Timer.Context saveTimer =
                     this.metricRegistry.timer(config.getStorage().getClass().getName()).time();
             final URL url = config.getStorage().save(
-                    this.ref, fileName, fileExtension, mimeType, getReportFile());
+                    this.referenceId, fileName, fileExtension, mimeType, getReportFile());
             saveTimer.stop();
             msg = msg.replace("{url}", url.toString());
         }
