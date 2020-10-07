@@ -235,10 +235,12 @@ public class ThreadPoolJobManager implements JobManager {
                                 try {
                                     ThreadPoolJobManager.this.jobQueue
                                             .start(printJob.getEntry().getReferenceId());
+                                } catch (JobQueue.UnableGetJob e) {
+                                    LOGGER.warn("Unable to get the job");
                                 } catch (RuntimeException e) {
-                                    LOGGER.error("failed to mark job as running", e);
+                                    LOGGER.error("Failed to mark job as running", e);
                                 } catch (NoSuchReferenceException e) {
-                                    LOGGER.error("tried to mark non-existing job as 'running': {}",
+                                    LOGGER.error("Tried to mark non-existing job as 'running': {}",
                                                  printJob.getEntry().getReferenceId(), e);
                                 }
                             }
