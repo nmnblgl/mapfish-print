@@ -295,7 +295,7 @@ public class ThreadPoolJobManager implements JobManager {
     protected PrintJob createJob(final String ref) {
         //CHECKSTYLE:ON
         PrintJob job = this.context.getBean(PrintJob.class);
-        job.setRef(ref);
+        job.setReferenceId(ref);
         job.setSecurityContext(SecurityContextHolder.getContext());
         return job;
     }
@@ -332,7 +332,7 @@ public class ThreadPoolJobManager implements JobManager {
             submitInternal(entry);
         } finally {
             if (!this.clustered) {
-                executeJob(createJob(entry));
+                executeJob(createJob(entry.getReferenceId()));
             }
         }
     }
@@ -402,7 +402,7 @@ public class ThreadPoolJobManager implements JobManager {
         if (this.runningTasksFutures.size() < this.maxNumberOfRunningPrintJobs) {
             for (String ref:
                     this.jobQueue.start(this.maxNumberOfRunningPrintJobs - this.runningTasksFutures.size())) {
-                executeJob(createJob(stat.getEntry()));
+                executeJob(createJob(ref));
             }
         }
     }

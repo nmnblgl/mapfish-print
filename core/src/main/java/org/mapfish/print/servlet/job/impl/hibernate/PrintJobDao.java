@@ -226,15 +226,8 @@ public class PrintJobDao {
         criteria.orderBy(builder.asc(root.get("entry").get("startTime")));
         final Query<PrintJobStatusExtImpl> query = getSession().createQuery(criteria);
         query.setMaxResults(size);
-        // LOCK but don't wait for release (since this is run continuously
-        // anyway, no wait prevents deadlock)
-        query.setLockMode("pj", LockMode.UPGRADE_NOWAIT);
-        try {
-            return query.getResultList();
-        } catch (PessimisticLockException ex) {
-            // Another process was polling at the same time. We can ignore this error
-            return Collections.emptyList();
-        }
+        query.setLockMode("pj", LockMode.PESSIMISTIC_WRITE);
+        return query.getResultList();
     }
 
     /**

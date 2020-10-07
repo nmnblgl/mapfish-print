@@ -299,7 +299,7 @@ public class RegistryJobQueue implements JobQueue {
     }
 
     @Override
-    public final List<? extends PrintJobStatus> start(final int number) {
+    public final List<String> start(final int number) {
         throw new UnsupportedOperationException();
     }
 
