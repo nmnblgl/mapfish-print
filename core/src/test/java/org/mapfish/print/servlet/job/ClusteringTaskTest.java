@@ -106,7 +106,7 @@ public class ClusteringTaskTest extends AbstractMapfishSpringTest {
                 }
             };
             job.initForTesting(ClusteringTaskTest.this.context);
-            job.setEntry(entry);
+            job.setReferenceId(entry.getReferenceId());
             job.setSecurityContext(SecurityContextHolder.getContext());
             return job;
         }
