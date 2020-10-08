@@ -172,7 +172,7 @@ dependencies {
             'com.sun.mail:javax.mail:1.6.2',
             'com.amazonaws:aws-java-sdk-s3:1.11.878',
             'com.adobe.xmp:xmpcore:6.1.10',
-            'io.sentry:sentry-logback:1.7.7'
+            'io.sentry:sentry-logback:1.7.30'
     )
 
     compile(configurations.metrics) {
