@@ -218,7 +218,16 @@ public class MapPrinterServlet extends BaseMapServlet {
         this.servletInfo = servletInfo;
         this.mapPrinterFactory = mapPrinterFactory;
 
-        Sentry.init(options -> {
+        Sentry.init(
+            options -> {
+                options.setBeforeSend(
+                    (event, hint) -> {
+                        return event;
+                    }
+                );
+            }
+        );
+/*        Sentry.init(options -> {
             options.setBeforeSend(
                 (event, hint) -> {
                     if (event.getLogger() == "org.hibernate.engine.jdbc.spi.SqlExceptionHelper"
@@ -229,7 +238,7 @@ public class MapPrinterServlet extends BaseMapServlet {
                     return event;
                 }
             );
-        });
+        });*/
     }
 
     /**
